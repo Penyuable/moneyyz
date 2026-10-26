@@ -38,8 +38,10 @@ String friendlyError(Object error) {
     if (error.code == '23514' || message.contains('check constraint')) {
       return 'Data tidak valid. Periksa nominal dan kategori.';
     }
-    if (message.contains('relation') && message.contains('does not exist')) {
-      return 'Database belum disiapkan. Jalankan file supabase/schema.sql.';
+    if (error.code == 'PGRST205' ||
+        message.contains('could not find the table') ||
+        (message.contains('relation') && message.contains('does not exist'))) {
+      return 'Tabel database tidak ditemukan. Jalankan file supabase/schema.sql.';
     }
     return 'Gagal menyimpan data: ${error.message}';
   }

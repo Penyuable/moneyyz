@@ -30,21 +30,38 @@ class TransactionRecord {
   bool get isIncome => type.isIncome;
 
   factory TransactionRecord.fromMap(Map<String, dynamic> map) {
+    final receipt = _firstReceipt(map['finance_receipts']);
     return TransactionRecord(
       id: map['id'] as String,
       userId: map['user_id'] as String? ?? '',
       categoryId: map['category_id'] as String?,
       type: TxType.fromString(map['type'] as String?),
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
-      title: map['title'] as String? ?? 'Transaksi',
-      note: map['note'] as String?,
-      merchant: map['merchant'] as String?,
+      // Tabel finance_transactions memakai kolom description/notes.
+      title: (map['description'] ?? map['title']) as String? ?? 'Transaksi',
+      note: (map['notes'] ?? map['note']) as String?,
+      merchant:
+          (map['merchant'] as String?) ??
+          (receipt?['merchant_name'] as String?),
       date: _parseDate(map['transaction_date']),
-      receiptPath: map['receipt_path'] as String?,
+      receiptPath:
+          (map['receipt_path'] as String?) ??
+          (receipt?['storage_path'] as String?),
       createdAt:
           DateTime.tryParse(map['created_at'] as String? ?? '')?.toLocal() ??
           DateTime.now(),
     );
+  }
+
+  /// Mengambil data struk pertama dari hasil join `finance_receipts`.
+  static Map<String, dynamic>? _firstReceipt(Object? value) {
+    if (value is List && value.isNotEmpty) {
+      final first = value.first;
+      if (first is Map) return Map<String, dynamic>.from(first);
+    } else if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return null;
   }
 
   static DateTime _parseDate(Object? value) {
@@ -54,7 +71,6 @@ class TransactionRecord {
     return DateTime.now();
   }
 }
-
 
 class TransactionDraft {
   const TransactionDraft({
@@ -83,11 +99,9 @@ class TransactionDraft {
       'category_id': categoryId,
       'type': type.value,
       'amount': amount,
-      'title': title.trim(),
-      'note': note.trim().isEmpty ? null : note.trim(),
-      'merchant': merchant?.trim().isEmpty == true ? null : merchant?.trim(),
+      'description': title.trim(),
+      'notes': note.trim().isEmpty ? null : note.trim(),
       'transaction_date': _dateOnly(date),
-      'receipt_path': receiptPath,
     };
   }
 

@@ -57,102 +57,165 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- ---------------------------------------------------------------------------
--- 2. CATEGORIES (pemasukan / pengeluaran)
+-- 2. FINANCE CATEGORIES (pemasukan / pengeluaran)
 -- ---------------------------------------------------------------------------
-create table if not exists public.categories (
+create table if not exists public.finance_categories (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users (id) on delete cascade,
   name       text not null,
   type       text not null check (type in ('income', 'expense')),
-  icon       text not null default 'category',
-  color      text not null default '#5B5BD6',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  icon       text,
+  color      text,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now()
 );
 
-create index if not exists categories_user_idx
-  on public.categories (user_id, type);
+create index if not exists finance_categories_user_idx
+  on public.finance_categories (user_id, type);
 
-alter table public.categories enable row level security;
+alter table public.finance_categories enable row level security;
 
-drop policy if exists "categories_select_own" on public.categories;
-create policy "categories_select_own"
-  on public.categories for select
+drop policy if exists "finance_categories_select_own" on public.finance_categories;
+create policy "finance_categories_select_own"
+  on public.finance_categories for select
   to authenticated
   using (auth.uid() = user_id);
 
-drop policy if exists "categories_insert_own" on public.categories;
-create policy "categories_insert_own"
-  on public.categories for insert
+drop policy if exists "finance_categories_insert_own" on public.finance_categories;
+create policy "finance_categories_insert_own"
+  on public.finance_categories for insert
   to authenticated
   with check (auth.uid() = user_id);
 
-drop policy if exists "categories_update_own" on public.categories;
-create policy "categories_update_own"
-  on public.categories for update
+drop policy if exists "finance_categories_update_own" on public.finance_categories;
+create policy "finance_categories_update_own"
+  on public.finance_categories for update
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-drop policy if exists "categories_delete_own" on public.categories;
-create policy "categories_delete_own"
-  on public.categories for delete
+drop policy if exists "finance_categories_delete_own" on public.finance_categories;
+create policy "finance_categories_delete_own"
+  on public.finance_categories for delete
   to authenticated
   using (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
--- 3. TRANSACTIONS
+-- 3. FINANCE TRANSACTIONS
 -- ---------------------------------------------------------------------------
-create table if not exists public.transactions (
+create table if not exists public.finance_transactions (
   id               uuid primary key default gen_random_uuid(),
-  user_id          uuid not null references auth.users (id) on delete cascade,
-  category_id      uuid references public.categories (id) on delete set null,
+  user_id          uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  category_id      uuid references public.finance_categories (id) on delete set null,
   type             text not null check (type in ('income', 'expense')),
-  amount           numeric(14, 2) not null check (amount > 0),
-  title            text not null,
-  note             text,
-  merchant         text,
+  amount           numeric not null check (amount > 0),
+  description      text,
   transaction_date date not null default current_date,
-  receipt_path     text,
+  payment_method   text check (
+    payment_method is null
+    or payment_method in ('cash', 'bank_transfer', 'e_wallet', 'credit_card', 'debit_card', 'other')
+  ),
+  source           text not null default 'manual' check (source in ('manual', 'receipt', 'ocr')),
+  notes            text,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
 
-create index if not exists transactions_user_date_idx
-  on public.transactions (user_id, transaction_date desc);
+create index if not exists finance_transactions_user_date_idx
+  on public.finance_transactions (user_id, transaction_date desc);
 
-create index if not exists transactions_category_idx
-  on public.transactions (category_id);
+create index if not exists finance_transactions_category_idx
+  on public.finance_transactions (category_id);
 
-alter table public.transactions enable row level security;
+alter table public.finance_transactions enable row level security;
 
-drop policy if exists "transactions_select_own" on public.transactions;
-create policy "transactions_select_own"
-  on public.transactions for select
+drop policy if exists "finance_transactions_select_own" on public.finance_transactions;
+create policy "finance_transactions_select_own"
+  on public.finance_transactions for select
   to authenticated
   using (auth.uid() = user_id);
 
-drop policy if exists "transactions_insert_own" on public.transactions;
-create policy "transactions_insert_own"
-  on public.transactions for insert
+drop policy if exists "finance_transactions_insert_own" on public.finance_transactions;
+create policy "finance_transactions_insert_own"
+  on public.finance_transactions for insert
   to authenticated
   with check (auth.uid() = user_id);
 
-drop policy if exists "transactions_update_own" on public.transactions;
-create policy "transactions_update_own"
-  on public.transactions for update
+drop policy if exists "finance_transactions_update_own" on public.finance_transactions;
+create policy "finance_transactions_update_own"
+  on public.finance_transactions for update
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-drop policy if exists "transactions_delete_own" on public.transactions;
-create policy "transactions_delete_own"
-  on public.transactions for delete
+drop policy if exists "finance_transactions_delete_own" on public.finance_transactions;
+create policy "finance_transactions_delete_own"
+  on public.finance_transactions for delete
   to authenticated
   using (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
--- 4. TRIGGER updated_at
+-- 4. FINANCE RECEIPTS (foto struk)
+-- ---------------------------------------------------------------------------
+create table if not exists public.finance_receipts (
+  id              uuid primary key default gen_random_uuid(),
+  transaction_id  uuid not null references public.finance_transactions (id) on delete cascade,
+  user_id         uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  storage_path    text not null,
+  file_name       text,
+  mime_type       text check (
+    mime_type is null
+    or mime_type in ('image/jpeg', 'image/png', 'image/webp', 'application/pdf')
+  ),
+  file_size_bytes bigint check (file_size_bytes is null or file_size_bytes >= 0),
+  merchant_name   text,
+  receipt_date    date,
+  subtotal        numeric check (subtotal is null or subtotal >= 0),
+  tax_amount      numeric check (tax_amount is null or tax_amount >= 0),
+  total_amount    numeric check (total_amount is null or total_amount >= 0),
+  ocr_status      text not null default 'pending' check (
+    ocr_status in ('pending', 'processing', 'completed', 'failed', 'review')
+  ),
+  ocr_raw_text    text,
+  ocr_data        jsonb not null default '{}'::jsonb,
+  created_at      timestamptz not null default now()
+);
+
+create index if not exists finance_receipts_transaction_idx
+  on public.finance_receipts (transaction_id);
+
+create index if not exists finance_receipts_user_idx
+  on public.finance_receipts (user_id);
+
+alter table public.finance_receipts enable row level security;
+
+drop policy if exists "finance_receipts_select_own" on public.finance_receipts;
+create policy "finance_receipts_select_own"
+  on public.finance_receipts for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "finance_receipts_insert_own" on public.finance_receipts;
+create policy "finance_receipts_insert_own"
+  on public.finance_receipts for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "finance_receipts_update_own" on public.finance_receipts;
+create policy "finance_receipts_update_own"
+  on public.finance_receipts for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "finance_receipts_delete_own" on public.finance_receipts;
+create policy "finance_receipts_delete_own"
+  on public.finance_receipts for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- 5. TRIGGER updated_at
 -- ---------------------------------------------------------------------------
 create or replace function public.set_updated_at()
 returns trigger
@@ -169,18 +232,13 @@ create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
 
-drop trigger if exists categories_set_updated_at on public.categories;
-create trigger categories_set_updated_at
-  before update on public.categories
-  for each row execute function public.set_updated_at();
-
-drop trigger if exists transactions_set_updated_at on public.transactions;
-create trigger transactions_set_updated_at
-  before update on public.transactions
+drop trigger if exists finance_transactions_set_updated_at on public.finance_transactions;
+create trigger finance_transactions_set_updated_at
+  before update on public.finance_transactions
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- 5. STORAGE: foto struk (bucket privat)
+-- 6. STORAGE: foto struk (bucket privat)
 -- ---------------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
@@ -236,11 +294,14 @@ create policy "receipts_delete_own"
   );
 
 -- ---------------------------------------------------------------------------
--- 6. HAK AKSES
+-- 7. HAK AKSES
 -- ---------------------------------------------------------------------------
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete
-  on public.profiles, public.categories, public.transactions
+  on public.profiles,
+     public.finance_categories,
+     public.finance_transactions,
+     public.finance_receipts
   to authenticated;
 
 -- Selesai. Data setiap pengguna dilindungi oleh Row Level Security.

@@ -11,7 +11,7 @@ class CategoryRepository {
 
   Future<List<Category>> fetchAll(String userId) async {
     final rows = await _client
-        .from('categories')
+        .from('finance_categories')
         .select()
         .eq('user_id', userId)
         .order('created_at', ascending: true);
@@ -23,7 +23,7 @@ class CategoryRepository {
 
   Future<Category> create(Category category) async {
     final row = await _client
-        .from('categories')
+        .from('finance_categories')
         .insert(category.toInsert(userId: category.userId))
         .select()
         .single();
@@ -32,13 +32,13 @@ class CategoryRepository {
 
   Future<void> update(Category category) async {
     await _client
-        .from('categories')
+        .from('finance_categories')
         .update(category.toUpdate())
         .eq('id', category.id);
   }
 
   Future<void> delete(String id) async {
-    await _client.from('categories').delete().eq('id', id);
+    await _client.from('finance_categories').delete().eq('id', id);
   }
 
   /// Mengisi kategori bawaan untuk pengguna baru.
@@ -46,7 +46,7 @@ class CategoryRepository {
     final rows = kDefaultCategories.map((seed) => seed.toMap(userId)).toList();
 
     final existing = await _client
-        .from('categories')
+        .from('finance_categories')
         .select('name, type')
         .eq('user_id', userId);
 
@@ -59,7 +59,7 @@ class CategoryRepository {
         .toList();
 
     if (missing.isEmpty) return;
-    await _client.from('categories').insert(missing);
+    await _client.from('finance_categories').insert(missing);
   }
 
   /// Warna default untuk kategori baru.
