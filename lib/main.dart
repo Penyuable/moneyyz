@@ -14,7 +14,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
-    anonKey: AppConfig.supabaseAnonKey,
+    publishableKey: AppConfig.supabaseAnonKey,
     debug: false,
   );
 
@@ -42,7 +42,7 @@ class SakuApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

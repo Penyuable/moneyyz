@@ -29,7 +29,10 @@ class TransactionTile extends ConsumerWidget {
       }
     }
 
-    final color = (category?.color) ?? (transaction.isIncome ? const Color(0xFF10B981) : const Color(0xFFF43F5E));
+    final color = (category?.color) ??
+        (transaction.isIncome
+            ? const Color(0xFF10B981)
+            : const Color(0xFFF43F5E));
     final icon = categoryIcon(category?.icon);
 
     return DecoratedBox(
@@ -39,27 +42,68 @@ class TransactionTile extends ConsumerWidget {
         border: Border.all(color: context.borderColor),
       ),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.14),
-          child: Icon(icon, color: color),
+        contentPadding: const EdgeInsets.fromLTRB(12, 4, 16, 4),
+        leading: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.13),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: color, size: 22),
         ),
-        title: Text(transaction.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-          category?.name ?? (transaction.isIncome ? 'Pemasukan' : 'Pengeluaran'),
-          style: context.texts.bodySmall,
+        title: Text(
+          transaction.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.texts.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  category?.name ??
+                      (transaction.isIncome ? 'Pemasukan' : 'Pengeluaran'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.texts.bodySmall,
+                ),
+              ),
+              if (transaction.receiptPath != null) ...[
+                const SizedBox(width: 5),
+                Icon(
+                  Icons.receipt_long_rounded,
+                  size: 12,
+                  color: context.mutedColor.withValues(alpha: 0.75),
+                ),
+              ],
+            ],
+          ),
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              formatSignedRupiah(transaction.amount, isIncome: transaction.isIncome),
+              formatSignedRupiah(
+                transaction.amount,
+                isIncome: transaction.isIncome,
+              ),
               style: TextStyle(
-                color: transaction.isIncome ? const Color(0xFF10B981) : const Color(0xFFF43F5E),
+                color: transaction.isIncome
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFF43F5E),
                 fontWeight: FontWeight.w700,
+                fontSize: 14,
               ),
             ),
-            Text(formatDayMonth(transaction.date), style: context.texts.bodySmall),
+            const SizedBox(height: 2),
+            Text(
+              formatDayMonth(transaction.date),
+              style: context.texts.bodySmall?.copyWith(fontSize: 11),
+            ),
           ],
         ),
       ),

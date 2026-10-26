@@ -79,7 +79,7 @@ class TransactionDraft {
 
   Map<String, dynamic> toMap({String? userId}) {
     return {
-      if (userId != null) 'user_id': userId,
+      'user_id': ?userId,
       'category_id': categoryId,
       'type': type.value,
       'amount': amount,

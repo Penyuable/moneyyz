@@ -28,6 +28,36 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('sharedPreferencesProvider harus di-inisialisasi');
 });
 
+/// Preferensi tema: ikuti sistem, terang, atau gelap.
+class ThemeModeNotifier extends StateNotifier<ThemeMode> {
+  ThemeModeNotifier(this._prefs) : super(_read(_prefs));
+
+  static const _key = 'theme_mode';
+  final SharedPreferences _prefs;
+
+  static ThemeMode _read(SharedPreferences prefs) {
+    return switch (prefs.getString(_key)) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+  }
+
+  Future<void> setMode(ThemeMode mode) async {
+    state = mode;
+    await _prefs.setString(_key, switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    });
+  }
+}
+
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
+  return ThemeModeNotifier(ref.watch(sharedPreferencesProvider));
+});
+
 /// Repositories
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(supabaseClientProvider));
@@ -66,7 +96,7 @@ final currentUserProvider = Provider<User?>((ref) {
   return authState.when(
     data: (state) => state.session?.user ?? Supabase.instance.client.auth.currentUser,
     loading: () => Supabase.instance.client.auth.currentUser,
-    error: (_, __) => Supabase.instance.client.auth.currentUser,
+    error: (_, _) => Supabase.instance.client.auth.currentUser,
   );
 });
 
@@ -140,7 +170,7 @@ final monthSummaryProvider = Provider.family<MonthSummary, String>((ref, userId)
       );
     },
     loading: () => const MonthSummary(income: 0, expense: 0, balance: 0),
-    error: (_, __) => const MonthSummary(income: 0, expense: 0, balance: 0),
+    error: (_, _) => const MonthSummary(income: 0, expense: 0, balance: 0),
   );
 });
 
