@@ -7,6 +7,7 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_shell.dart';
 import '../screens/onboarding/splash_screen.dart';
+import '../screens/savings/savings_plans_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -14,7 +15,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
-      final user = authState.value?.session?.user ?? Supabase.instance.client.auth.currentUser;
+      final user =
+          authState.value?.session?.user ??
+          Supabase.instance.client.auth.currentUser;
       final location = state.uri.path;
 
       if (authState.isLoading) {
@@ -26,7 +29,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
-      if (location == '/splash' || location == '/login' || location == '/register') {
+      if (location == '/splash' ||
+          location == '/login' ||
+          location == '/register') {
         return '/home';
       }
 
@@ -52,6 +57,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/home',
         name: 'home',
         builder: (context, state) => const HomeShell(),
+      ),
+      GoRoute(
+        path: '/savings',
+        name: 'savings',
+        builder: (context, state) => const SavingsPlansScreen(),
       ),
     ],
   );

@@ -12,6 +12,7 @@ import '../../data/models/transaction_record.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/home/balance_card.dart';
 import '../../widgets/home/month_header.dart';
+import '../../widgets/home/savings_plan_card.dart';
 import '../../widgets/home/transaction_tile.dart';
 import '../../widgets/transaction/quick_add_sheet.dart';
 
@@ -91,8 +92,7 @@ class _HomeDashboard extends ConsumerWidget {
     final transactions = ref.watch(transactionsProvider(userId));
     final user = ref.watch(currentUserProvider);
 
-    final fullName =
-        user?.userMetadata?['full_name']?.toString().trim() ?? '';
+    final fullName = user?.userMetadata?['full_name']?.toString().trim() ?? '';
     final displayName = fullName.isEmpty
         ? 'Sahabat Saku'
         : fullName.split(RegExp(r'\s+')).first;
@@ -174,6 +174,8 @@ class _HomeDashboard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 BalanceCard(summary: summary),
+                const SizedBox(height: 14),
+                SavingsPlanCard(onTap: () => context.push('/savings')),
                 const SizedBox(height: 24),
                 Row(
                   children: [
@@ -226,7 +228,9 @@ class _HomeDashboard extends ConsumerWidget {
             for (final tx in items) {
               final day = formatRelativeDay(tx.date);
               if (day != lastDay) {
-                if (children.isNotEmpty) children.add(const SizedBox(height: 6));
+                if (children.isNotEmpty) {
+                  children.add(const SizedBox(height: 6));
+                }
                 children.add(_DateHeader(label: day));
                 lastDay = day;
               }
@@ -243,9 +247,7 @@ class _HomeDashboard extends ConsumerWidget {
 
             return SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate(children),
-              ),
+              sliver: SliverList(delegate: SliverChildListDelegate(children)),
             );
           },
           loading: () => const SliverToBoxAdapter(
@@ -296,9 +298,7 @@ class _DateHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: Divider(color: context.borderColor),
-          ),
+          Expanded(child: Divider(color: context.borderColor)),
         ],
       ),
     );
@@ -348,7 +348,8 @@ class _CategoriesPage extends ConsumerWidget {
     final transactions = ref.watch(transactionsProvider(user?.id ?? ''));
 
     final totals = <String, double>{};
-    for (final tx in transactions.asData?.value ?? const <TransactionRecord>[]) {
+    for (final tx
+        in transactions.asData?.value ?? const <TransactionRecord>[]) {
       final id = tx.categoryId;
       if (id != null) totals[id] = (totals[id] ?? 0) + tx.amount;
     }
@@ -483,10 +484,7 @@ class _CategoryTile extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          subtitle: Text(
-            category.type.label,
-            style: context.texts.bodySmall,
-          ),
+          subtitle: Text(category.type.label, style: context.texts.bodySmall),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
