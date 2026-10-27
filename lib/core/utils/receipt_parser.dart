@@ -1,5 +1,20 @@
 import 'dart:math' as math;
 
+/// Item hasil pembacaan struk belanja.
+class ReceiptItem {
+  const ReceiptItem({
+    required this.name,
+    this.quantity,
+    this.unitPrice,
+    this.amount,
+  });
+
+  final String name;
+  final double? quantity;
+  final double? unitPrice;
+  final double? amount;
+}
+
 /// Hasil pembacaan struk belanja.
 class ReceiptParseResult {
   const ReceiptParseResult({
@@ -8,6 +23,7 @@ class ReceiptParseResult {
     this.date,
     this.merchant,
     this.categoryHint,
+    this.items = const [],
   });
 
   final String rawText;
@@ -15,8 +31,10 @@ class ReceiptParseResult {
   final DateTime? date;
   final String? merchant;
   final String? categoryHint;
+  final List<ReceiptItem> items;
 
-  bool get hasData => amount != null || date != null || merchant != null;
+  bool get hasData =>
+      amount != null || date != null || merchant != null || items.isNotEmpty;
 
   static const empty = ReceiptParseResult(rawText: '');
 }
@@ -142,6 +160,7 @@ class ReceiptParser {
     final amount = _findTotal(lines);
     final date = _findDate(normalized);
     final merchant = _findMerchant(lines);
+    final items = _findItems(lines);
 
     return ReceiptParseResult(
       rawText: normalized.trim(),
@@ -149,6 +168,7 @@ class ReceiptParser {
       date: date,
       merchant: merchant,
       categoryHint: _findCategoryHint('${merchant ?? ''} $normalized'),
+      items: items,
     );
   }
 
@@ -484,5 +504,97 @@ class ReceiptParser {
       }
     }
     return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Daftar item per barang
+  // ---------------------------------------------------------------------------
+  static const List<String> _itemBlockers = [
+    'subtotal',
+    'sub total',
+    'total',
+    'grand total',
+    'jumlah bayar',
+    'total bayar',
+    'kembali',
+    'kembalian',
+    'tunai',
+    'cash',
+    'debit',
+    'kredit',
+    'qris',
+    'ppn',
+    'pajak',
+    'tax',
+    'diskon',
+    'potongan',
+    'service',
+    'biaya',
+    'tagihan',
+    'pelanggan',
+    'kasir',
+    'alamat',
+    'telp',
+    'tanggal',
+    'nota',
+    'struk',
+  ];
+
+  static List<ReceiptItem> _findItems(List<String> lines) {
+    final items = <ReceiptItem>[];
+    for (final line in lines) {
+      final lower = line.toLowerCase();
+      if (_itemBlockers.any((b) => lower.contains(b))) continue;
+      if (lower.contains('qty') && lower.contains('harga')) continue;
+      if (lower.contains('harga satuan') || lower.contains('unit price')) continue;
+
+      final amounts = _amountsIn(line);
+      if (amounts.isEmpty) continue;
+
+      final matchQty = RegExp(r'(\d+(?:[.,]\d+)?)\s*(x|pcs|pc|buah|kg|gr|ltr|botol|bungkus|pack)\b',
+              caseSensitive: false)
+          .firstMatch(line);
+      final qty = matchQty != null ? _parseNumber(matchQty.group(1)!) : null;
+
+      String name = line;
+      // Hapus nominal & qty biar dapet nama item
+      name = name.replaceAll(_numberPattern, ' ');
+      name = name.replaceAll(
+          RegExp(r'(\d+(?:[.,]\d+)?)\s*(x|pcs|pc|buah|kg|gr|ltr|botol|bungkus|pack)\b',
+              caseSensitive: false),
+          ' ');
+      name = name.replaceAll(RegExp(r'[@=:+\-_/\\|]'), ' ');
+      name = name.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      if (name.length < 2 || name.length > 40) continue;
+      final nameLower = name.toLowerCase();
+      if (_merchantBlockers.any(nameLower.contains)) continue;
+      if (_itemBlockers.any(nameLower.contains)) continue;
+
+      final amount = amounts.reduce(math.max);
+      if (!_isPlausibleAmount(amount)) continue;
+
+      double? unitPrice;
+      if (qty != null && qty > 0 && qty < 1000) {
+        final candidate = amount / qty;
+        if (_isPlausibleAmount(candidate)) unitPrice = candidate;
+      }
+
+      items.add(ReceiptItem(
+        name: _titleCase(name),
+        quantity: qty,
+        unitPrice: unitPrice,
+        amount: amount,
+      ));
+    }
+    // Hindarin duplikat
+    final unique = <String, ReceiptItem>{};
+    for (final item in items) {
+      final key = item.name.toLowerCase();
+      if (!unique.containsKey(key)) {
+        unique[key] = item;
+      }
+    }
+    return unique.values.take(20).toList();
   }
 }

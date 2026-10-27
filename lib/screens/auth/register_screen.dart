@@ -62,10 +62,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? Colors.white : Colors.black;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor, width: 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: borderColor,
+                  offset: const Offset(4, 4),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.arrow_back_rounded),
+          ),
           onPressed: () => context.go('/login'),
         ),
       ),
@@ -75,101 +93,175 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  gradient: AppColors.brandGradient,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 30),
+              Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.violet,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: borderColor,
+                          offset: const Offset(6, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.pets_rounded, color: Colors.white, size: 32),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('WOFF & MEONG', style: context.texts.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                      Text('JOIN THE PACK', style: context.texts.labelSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2)),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
-              Text('Buat akun Saku', style: context.texts.headlineSmall),
-              const SizedBox(height: 6),
-              Text(
-                'Mulai kelola keuanganmu dengan lebih rapi',
-                style: context.texts.bodyMedium?.copyWith(color: context.mutedColor),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: borderColor, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: borderColor,
+                      offset: const Offset(7, 7),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'Buat akun buat mulai ngatur duit bareng puddel squad!',
+                  style: context.texts.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
+              Text('DAFTAR', style: context.texts.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 6)),
+              const SizedBox(height: 16),
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _name,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama lengkap',
-                        hintText: 'Siapa namamu?',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
+                    Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: borderColor,
+                            offset: const Offset(6, 6),
+                          ),
+                        ],
                       ),
-                      validator: (v) {
-                        if ((v ?? '').trim().isEmpty) return 'Nama wajib diisi';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'nama@email.com',
-                        prefixIcon: Icon(Icons.mail_outline_rounded),
-                      ),
-                      validator: (v) {
-                        final value = v?.trim() ?? '';
-                        if (value.isEmpty) return 'Email wajib diisi';
-                        if (!value.contains('@')) return 'Format email tidak valid';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _password,
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        hintText: 'Minimal 6 karakter',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      child: TextFormField(
+                        controller: _name,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'NAMA LENGKAP',
+                          hintText: 'Siapa namamu?',
+                          prefixIcon: Icon(Icons.person_outline_rounded),
                         ),
+                        validator: (v) {
+                          if ((v ?? '').trim().isEmpty) return 'Nama wajib diisi';
+                          return null;
+                        },
                       ),
-                      validator: (v) {
-                        final value = v ?? '';
-                        if (value.isEmpty) return 'Password wajib diisi';
-                        if (value.length < 6) return 'Minimal 6 karakter';
-                        return null;
-                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: borderColor,
+                            offset: const Offset(6, 6),
+                          ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'EMAIL',
+                          hintText: 'nama@email.com',
+                          prefixIcon: Icon(Icons.mail_outline_rounded),
+                        ),
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return 'Email wajib diisi';
+                          if (!value.contains('@')) return 'Format email tidak valid';
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: borderColor,
+                            offset: const Offset(6, 6),
+                          ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: _password,
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        decoration: InputDecoration(
+                          labelText: 'PASSWORD',
+                          hintText: 'Minimal 6 karakter',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                            icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                          ),
+                        ),
+                        validator: (v) {
+                          final value = v ?? '';
+                          if (value.isEmpty) return 'Password wajib diisi';
+                          if (value.length < 6) return 'Minimal 6 karakter';
+                          return null;
+                        },
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 26),
-              FilledButton(
-                onPressed: _loading ? null : _submit,
-                child: _loading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Daftar'),
+              const SizedBox(height: 28),
+              Container(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: borderColor,
+                      offset: const Offset(8, 8),
+                    ),
+                  ],
+                ),
+                child: FilledButton(
+                  onPressed: _loading ? null : _submit,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                        )
+                      : const Text('DAFTAR'),
+                ),
               ),
               const SizedBox(height: 18),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Sudah punya akun?', style: context.texts.bodyMedium?.copyWith(color: context.mutedColor)),
+                  Text('SUDAH PUNYA AKUN?', style: context.texts.labelMedium?.copyWith(fontWeight: FontWeight.w900)),
                   TextButton(
                     onPressed: () => context.go('/login'),
-                    child: const Text('Masuk'),
+                    child: const Text('MASUK'),
                   ),
                 ],
               ),

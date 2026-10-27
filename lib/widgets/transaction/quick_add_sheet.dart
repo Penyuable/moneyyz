@@ -38,6 +38,8 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> with SingleTicker
   String? _receiptPath;
   bool _loading = false;
   bool _scanning = false;
+  List<ReceiptItem> _items = const [];
+  bool _splitItems = false;
 
   @override
   void dispose() {
@@ -61,6 +63,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> with SingleTicker
       final text = await ref.read(ocrServiceProvider).scanReceipt(file);
       final parsed = ReceiptParser.parse(text);
       setState(() {
+        _items = parsed.items;
         if (parsed.amount != null) {
           _amount.text = formatNumber(parsed.amount!.round());
         }
@@ -72,6 +75,9 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> with SingleTicker
         }
         if (parsed.merchant != null) {
           _merchant.text = parsed.merchant!;
+        }
+        if (_items.isNotEmpty) {
+          _splitItems = true;
         }
       });
     } catch (_) {
@@ -113,6 +119,51 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> with SingleTicker
         );
       }
 
+      final repo = ref.read(transactionRepositoryProvider);
+      final userId = ref.read(currentUserProvider)?.id;
+      final merchant = _merchant.text.trim().isEmpty ? null : _merchant.text.trim();
+      final baseNote = _note.text.trim();
+
+      if (_type == TxType.expense &&
+          _splitItems &&
+          _items.isNotEmpty) {
+        int created = 0;
+        for (final item in _items) {
+          final amount = item.amount ?? 0;
+          if (amount <= 0) continue;
+          String note = baseNote;
+          if (item.quantity != null && item.quantity! > 1) {
+            final qtyText =
+                item.quantity!.toString().replaceAll(RegExp(r'\.0$'), '');
+            note = note.isEmpty
+                ? 'Qty $qtyText'
+                : '$note • Qty $qtyText';
+          }
+          final draft = TransactionDraft(
+            type: _type,
+            amount: amount,
+            title: item.name,
+            date: _date,
+            categoryId: _category!.id,
+            note: note,
+            merchant: merchant,
+            receiptPath: receiptPath,
+          );
+          await repo.create(draft);
+          created++;
+        }
+        if (userId != null) {
+          ref.invalidate(transactionsProvider(userId));
+          ref.invalidate(monthSummaryProvider(userId));
+        }
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$created transaksi per barang berhasil dicatat')),
+        );
+        return;
+      }
+
       final amount = parseCurrencyInput(_amount.text);
       final draft = TransactionDraft(
         type: _type,
@@ -120,13 +171,12 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> with SingleTicker
         title: _title.text.trim(),
         date: _date,
         categoryId: _category!.id,
-        note: _note.text,
-        merchant: _merchant.text.trim().isEmpty ? null : _merchant.text.trim(),
+        note: baseNote.isEmpty ? _note.text : baseNote,
+        merchant: merchant,
         receiptPath: receiptPath,
       );
 
-      await ref.read(transactionRepositoryProvider).create(draft);
-      final userId = ref.read(currentUserProvider)?.id;
+      await repo.create(draft);
       if (userId != null) {
         ref.invalidate(transactionsProvider(userId));
         ref.invalidate(monthSummaryProvider(userId));
@@ -208,8 +258,73 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> with SingleTicker
                         onRemove: () => setState(() {
                           _receiptFile = null;
                           _receiptPath = null;
+                          _items = const [];
+                          _splitItems = false;
                         }),
                       ),
+                      if (_items.isNotEmpty && _type == TxType.expense) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: context.cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: context.borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Pisah per barang', style: context.texts.labelLarge),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${_items.length} item terdeteksi dari struk',
+                                          style: context.texts.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: _splitItems,
+                                    onChanged: (v) => setState(() => _splitItems = v),
+                                  ),
+                                ],
+                              ),
+                              if (_splitItems) ...[
+                                const SizedBox(height: 10),
+                                ..._items.map((item) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: context.texts.bodyMedium,
+                                            ),
+                                          ),
+                                          Text(
+                                            formatRupiah(item.amount ?? 0),
+                                            style: context.texts.labelMedium,
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                                Text(
+                                  'Akan dibuat ${_items.length} transaksi terpisah (satu per barang)',
+                                  style: context.texts.bodySmall?.copyWith(color: context.mutedColor),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 18),
                       Form(
                         key: _formKey,
@@ -339,7 +454,11 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> with SingleTicker
                                       height: 22,
                                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                     )
-                                  : Text(_type.isIncome ? 'Simpan Pemasukan' : 'Simpan Pengeluaran'),
+                                  : Text(
+                                      _type == TxType.expense && _splitItems && _items.isNotEmpty
+                                          ? 'Simpan ${_items.length} Transaksi'
+                                          : (_type.isIncome ? 'Simpan Pemasukan' : 'Simpan Pengeluaran'),
+                                    ),
                             ),
                           ],
                         ),

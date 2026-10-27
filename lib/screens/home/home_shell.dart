@@ -48,7 +48,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
       ),
       floatingActionButton: _index == 0
-          ? FloatingActionButton.extended(
+          ? FloatingActionButton(
               onPressed: () {
                 showModalBottomSheet(
                   context: context,
@@ -56,11 +56,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   builder: (context) => const QuickAddSheet(),
                 );
               },
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Tambah'),
+              child: const Icon(Icons.add_rounded),
             )
           : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),

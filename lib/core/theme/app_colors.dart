@@ -1,31 +1,40 @@
 import 'package:flutter/material.dart';
 
-/// Palet warna Saku.
+/// Palet warna Saku — Neo-Brutalism.
 class AppColors {
   AppColors._();
 
-  static const brand = Color(0xFF5B5BD6);
-  static const brandDeep = Color(0xFF4338CA);
-  static const violet = Color(0xFF8B5CF6);
-  static const accent = Color(0xFF14B8A6);
-  static const income = Color(0xFF10B981);
-  static const expense = Color(0xFFF43F5E);
-  static const warning = Color(0xFFF59E0B);
+  static const brand = Color(0xFFFF3B57);
+  static const brandDeep = Color(0xFFE71D36);
+  static const violet = Color(0xFF7C3FFF);
+  static const accent = Color(0xFF22D3EE);
+  static const income = Color(0xFF22C55E);
+  static const expense = Color(0xFFFF3B57);
+  static const warning = Color(0xFFFFD93B);
 
-  static const lightBg = Color(0xFFF6F6FB);
-  static const darkBg = Color(0xFF0C0D12);
-  static const darkCard = Color(0xFF151722);
-  static const darkElevated = Color(0xFF1D2030);
+  // Neo-Brutalism base
+  static const lightBg = Color(0xFFFFF7ED);
+  static const lightSurface = Color(0xFFFFFFFF);
+  static const lightCard = Color(0xFFFFFFFF);
+
+  // Neo-Brutalism dark
+  static const darkBg = Color(0xFF151515);
+  static const darkSurface = Color(0xFF1F1F1F);
+  static const darkCard = Color(0xFF1F1F1F);
+  static const darkElevated = Color(0xFF262626);
+
+  // Solid shadows
+  static const shadowBlack = Color(0xFF000000);
 
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF6D5DFB), Color(0xFF9B4DFF)],
+    colors: [Color(0xFFFF3B57), Color(0xFFFF6B6B)],
   );
 
   static const scanGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)],
+    colors: [Color(0xFF22D3EE), Color(0xFF3B82FF)],
   );
 }
