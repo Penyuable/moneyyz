@@ -10,6 +10,7 @@ import '../../core/utils/initials.dart' as init;
 import '../../data/models/category.dart';
 import '../../data/models/transaction_record.dart';
 import '../../providers/app_providers.dart';
+import '../statistics/statistics_screen.dart';
 import '../../widgets/home/balance_card.dart';
 import '../../widgets/home/month_header.dart';
 import '../../widgets/home/savings_plan_card.dart';
@@ -31,12 +32,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final user = ref.watch(currentUserProvider);
     final pages = [
       _HomeDashboard(userId: user?.id ?? ''),
+      const StatisticsScreen(),
       const _CategoriesPage(),
       const _SettingsPage(),
     ];
 
+    final topPadding = MediaQuery.of(context).viewPadding.top;
     return Scaffold(
-      body: SafeArea(top: false, child: pages[_index]),
+      body: SafeArea(
+        top: true,
+        bottom: true,
+        child: Padding(
+          padding: EdgeInsets.only(top: topPadding > 0 ? 4 : 0),
+          child: pages[_index],
+        ),
+      ),
       floatingActionButton: _index == 0
           ? FloatingActionButton.extended(
               onPressed: () {
@@ -59,6 +69,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home_rounded),
             label: 'Beranda',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart_rounded),
+            label: 'Statistik',
           ),
           NavigationDestination(
             icon: Icon(Icons.category_outlined),
@@ -647,33 +662,110 @@ class _SettingsPage extends ConsumerWidget {
           Text('Akun', style: context.texts.titleSmall),
           const SizedBox(height: 10),
           _SettingsCard(
-            child: ListTile(
-              leading: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: context.scheme.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(11),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: context.scheme.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(
+                      Icons.delete_sweep_rounded,
+                      color: context.scheme.error,
+                      size: 19,
+                    ),
+                  ),
+                  title: const Text('Hapus semua transaksi'),
+                  subtitle: Text(
+                    'Menghapus seluruh riwayat transaksi di akun ini',
+                    style: context.texts.bodySmall,
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.mutedColor,
+                  ),
+                  onTap: () async {
+                    final userId = user?.id;
+                    if (userId == null || userId.isEmpty) return;
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Hapus semua transaksi'),
+                        content: const Text(
+                          'Tindakan ini akan menghapus SEMUA transaksi dan struk terkait. Tidak bisa dibatalkan. Yakin?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Batal'),
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: context.scheme.error,
+                              foregroundColor: context.scheme.onError,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Hapus semua'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm != true) return;
+                    try {
+                      await ref
+                          .read(transactionRepositoryProvider)
+                          .deleteAll(userId);
+                      ref.invalidate(transactionsProvider(userId));
+                      ref.invalidate(monthSummaryProvider(userId));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Semua transaksi berhasil dihapus'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Gagal menghapus semua: $e')),
+                        );
+                      }
+                    }
+                  },
                 ),
-                child: Icon(
-                  Icons.logout_rounded,
-                  color: context.scheme.error,
-                  size: 19,
+                Divider(height: 1, color: context.borderColor),
+                ListTile(
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: context.scheme.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(
+                      Icons.logout_rounded,
+                      color: context.scheme.error,
+                      size: 19,
+                    ),
+                  ),
+                  title: const Text('Keluar dari akun'),
+                  subtitle: Text(
+                    'Kamu bisa masuk kembali kapan saja',
+                    style: context.texts.bodySmall,
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.mutedColor,
+                  ),
+                  onTap: () async {
+                    await ref.read(authRepositoryProvider).signOut();
+                    if (context.mounted) context.go('/login');
+                  },
                 ),
-              ),
-              title: const Text('Keluar dari akun'),
-              subtitle: Text(
-                'Kamu bisa masuk kembali kapan saja',
-                style: context.texts.bodySmall,
-              ),
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: context.mutedColor,
-              ),
-              onTap: () async {
-                await ref.read(authRepositoryProvider).signOut();
-                if (context.mounted) context.go('/login');
-              },
+              ],
             ),
           ),
           const SizedBox(height: 28),

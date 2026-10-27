@@ -1,16 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../models/transaction_record.dart';
 
 class TransactionRepository {
   TransactionRepository(this._client);
-
   final SupabaseClient _client;
-
   static const String _table = 'finance_transactions';
   static const String _receiptTable = 'finance_receipts';
-
   Future<List<TransactionRecord>> fetchRange({
     required String userId,
     required DateTime from,
@@ -70,6 +66,25 @@ class TransactionRepository {
     // finance_receipts memiliki foreign key ke finance_transactions.
     await _client.from(_receiptTable).delete().eq('transaction_id', id);
     await _client.from(_table).delete().eq('id', id);
+  }
+
+  Future<void> deleteAll(String userId) async {
+    final receipts = await _client
+        .from(_receiptTable)
+        .select('transaction_id')
+        .eq('user_id', userId);
+
+    if (receipts.isNotEmpty) {
+      final ids = receipts
+          .map((row) => row['transaction_id'])
+          .whereType<String>()
+          .toList();
+      if (ids.isNotEmpty) {
+        await _client.from(_receiptTable).delete().inFilter('transaction_id', ids);
+      }
+    }
+
+    await _client.from(_table).delete().eq('user_id', userId);
   }
 
   Future<void> _saveReceipt({

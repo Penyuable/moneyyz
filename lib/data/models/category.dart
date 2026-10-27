@@ -67,7 +67,7 @@ class Category {
   }
 }
 
-/// Kategori bawaan saat pengguna baru mendaftar.
+
 const List<CategorySeed> kDefaultCategories = [
   CategorySeed('Gaji', TxType.income, 'salary', Color(0xFF5B5BD6)),
   CategorySeed('Bonus', TxType.income, 'bonus', Color(0xFF7C3AED)),
